@@ -1,16 +1,11 @@
 output "ssh_private_key_path" {
-  description = "Path to the generated SSH private key for stress testing"
+  description = "Path to the SSH private key for stress testing"
   value       = local_file.stress_test_private_key.filename
 }
 
 output "ssh_public_key_path" {
-  description = "Path to the generated SSH public key"
+  description = "Path to the SSH public key"
   value       = local_file.stress_test_public_key.filename
-}
-
-output "ssh_public_key_content" {
-  description = "Content of the SSH public key"
-  value       = tls_private_key.stress_test_ssh_key.public_key_openssh
 }
 
 output "ssh_connection_command" {

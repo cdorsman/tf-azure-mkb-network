@@ -67,6 +67,12 @@ module "security" {
   depends_on = [module.networking]
 }
 
+# Generate SSH Keys for VM access
+resource "tls_private_key" "vm_ssh_key" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
 # Create Virtual Machine Scale Set
 module "vmss" {
   source = "./modules/vmss"
@@ -74,10 +80,25 @@ module "vmss" {
   resource_group_name = module.resource_group.resource_group_name
   location            = module.resource_group.resource_group_location
   subnet_id           = module.networking.web_subnet_id
-  ssh_public_key      = var.admin_ssh_public_key
+  ssh_public_key      = tls_private_key.vm_ssh_key.public_key_openssh
   tags                = local.common_tags
 
   depends_on = [module.security]
+}
+
+# Create Stress Test Infrastructure
+module "stress_test" {
+  source = "./modules/stress-test"
+
+  resource_group_name = module.resource_group.resource_group_name
+  location            = module.resource_group.resource_group_location
+  load_balancer_ip    = module.vmss.load_balancer_public_ip
+  admin_username      = "azureuser"
+  ssh_private_key     = tls_private_key.vm_ssh_key.private_key_pem
+  ssh_public_key      = tls_private_key.vm_ssh_key.public_key_openssh
+  tags                = local.common_tags
+
+  depends_on = [module.vmss]
 }
 
 # Create Azure Bastion (optional - can be enabled/disabled)

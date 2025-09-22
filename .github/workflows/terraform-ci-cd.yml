@@ -143,7 +143,6 @@ jobs:
           resource_group_name = "RG-MKB-Netwerk-Dev"
           location = "West Europe"
           vnet_name = "mkb-vnet-dev"
-          admin_ssh_public_key = "${{ secrets.SSH_PUBLIC_KEY }}"
           enable_bastion = true
           EOF
 
@@ -227,7 +226,6 @@ jobs:
           resource_group_name = "RG-MKB-Netwerk-Dev"
           location = "West Europe"
           vnet_name = "mkb-vnet-dev"
-          admin_ssh_public_key = "${{ secrets.SSH_PUBLIC_KEY }}"
           enable_bastion = true
           EOF
 
@@ -273,7 +271,6 @@ jobs:
           resource_group_name = "RG-MKB-Netwerk"
           location = "West Europe"
           vnet_name = "mkb-vnet"
-          admin_ssh_public_key = "${{ secrets.SSH_PUBLIC_KEY }}"
           enable_bastion = true
           EOF
 
@@ -324,7 +321,6 @@ jobs:
           resource_group_name = "RG-MKB-Netwerk"
           location = "West Europe"
           vnet_name = "mkb-vnet"
-          admin_ssh_public_key = "${{ secrets.SSH_PUBLIC_KEY }}"
           enable_bastion = true
           EOF
 

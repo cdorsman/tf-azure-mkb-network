@@ -120,16 +120,10 @@ module "security" {
   depends_on = [module.networking]
 }
 
-# Create SSH Keys and Stress Testing Infrastructure
-module "stress_test" {
-  source = "../modules/stress-test"
-
-  load_balancer_ip = module.vmss.load_balancer_public_ip
-  admin_username   = "azureuser"
-
-  tags = local.common_tags
-
-  depends_on = [module.vmss]
+# Generate SSH Keys for VM access
+resource "tls_private_key" "vm_ssh_key" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
 }
 
 # Create Virtual Machine Scale Set
@@ -153,13 +147,29 @@ module "vmss" {
   scale_out_cpu_threshold = 70
   scale_in_cpu_threshold  = 30
 
-  # SSH configuration from stress-test module
+  # SSH configuration
   admin_username = "azureuser"
-  ssh_public_key = module.stress_test.ssh_public_key_content
+  ssh_public_key = tls_private_key.vm_ssh_key.public_key_openssh
 
   tags = local.common_tags
 
   depends_on = [module.security]
+}
+
+# Create SSH Keys and Stress Testing Infrastructure
+module "stress_test" {
+  source = "../modules/stress-test"
+
+  resource_group_name = module.resource_group.resource_group_name
+  location            = module.resource_group.resource_group_location
+  load_balancer_ip    = module.vmss.load_balancer_public_ip
+  admin_username      = "azureuser"
+  ssh_private_key     = tls_private_key.vm_ssh_key.private_key_pem
+  ssh_public_key      = tls_private_key.vm_ssh_key.public_key_openssh
+
+  tags = local.common_tags
+
+  depends_on = [module.vmss]
 }
 
 # Create Monitoring Infrastructure
