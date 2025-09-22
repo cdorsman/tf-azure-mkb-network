@@ -40,6 +40,7 @@ module "resource_group" {
 }
 
 # Create Networking Infrastructure
+#checkov:skip=CKV2_AZURE_31:NSG associations are handled in the security module
 module "networking" {
   source = "./modules/networking"
 

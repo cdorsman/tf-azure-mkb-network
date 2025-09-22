@@ -1,6 +1,8 @@
 # Terraform files to ignore
 # See: https://github.com/github/gitignore/blob/main/Terraform.gitignore
 
+venv/
+
 # Local .terraform directories
 **/.terraform/*
 
