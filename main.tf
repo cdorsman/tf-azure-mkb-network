@@ -69,11 +69,11 @@ module "security" {
 module "vmss" {
   source = "./modules/vmss"
 
-  resource_group_name  = module.resource_group.resource_group_name
-  location             = module.resource_group.resource_group_location
-  subnet_id            = module.networking.web_subnet_id
-  admin_ssh_public_key = var.admin_ssh_public_key
-  tags                 = local.common_tags
+  resource_group_name = module.resource_group.resource_group_name
+  location            = module.resource_group.resource_group_location
+  subnet_id           = module.networking.web_subnet_id
+  ssh_public_key      = var.admin_ssh_public_key
+  tags                = local.common_tags
 
   depends_on = [module.security]
 }
