@@ -1,5 +1,11 @@
 name: 'Terraform CI/CD Pipeline'
 
+# Permissions needed for GitHub Actions
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
 on:
   push:
     branches:
@@ -103,6 +109,7 @@ jobs:
       - name: Upload Checkov results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: always()
+        continue-on-error: true
         with:
           sarif_file: checkov-report.sarif
 
