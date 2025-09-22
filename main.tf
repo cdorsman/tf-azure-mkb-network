@@ -55,13 +55,13 @@ module "networking" {
 module "security" {
   source = "./modules/security"
 
-  resource_group_name   = module.resource_group.resource_group_name
-  location              = module.resource_group.resource_group_location
-  web_subnet_id         = module.networking.web_subnet_id
-  app_subnet_id         = module.networking.app_subnet_id
-  db_subnet_id          = module.networking.db_subnet_id
-  bastion_subnet_id     = module.networking.bastion_subnet_id
-  tags                  = local.common_tags
+  resource_group_name = module.resource_group.resource_group_name
+  location            = module.resource_group.resource_group_location
+  web_subnet_id       = module.networking.web_subnet_id
+  app_subnet_id       = module.networking.app_subnet_id
+  db_subnet_id        = module.networking.db_subnet_id
+  bastion_subnet_id   = module.networking.bastion_subnet_id
+  tags                = local.common_tags
 
   depends_on = [module.networking]
 }

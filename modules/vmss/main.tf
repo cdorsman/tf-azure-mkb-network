@@ -65,12 +65,12 @@ resource "azurerm_lb_rule" "vmss_lb_rule" {
 
 # Create Virtual Machine Scale Set
 resource "azurerm_linux_virtual_machine_scale_set" "vmss" {
-  name                            = var.vmss_name
-  resource_group_name             = var.resource_group_name
-  location                        = var.location
-  sku                             = var.vm_sku
-  instances                       = var.initial_instances
-  
+  name                = var.vmss_name
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  sku                 = var.vm_sku
+  instances           = var.initial_instances
+
   # Security enhancements
   disable_password_authentication = true
   encryption_at_host_enabled      = true

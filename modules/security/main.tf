@@ -18,41 +18,41 @@ resource "azurerm_network_security_group" "web_nsg" {
 
   # Allow HTTP traffic (can be restricted to specific ranges)
   security_rule {
-    name                         = "AllowHTTP"
-    priority                     = 1001
-    direction                    = "Inbound"
-    access                       = "Allow"
-    protocol                     = "Tcp"
-    source_port_range            = "*"
-    destination_port_range       = "80"
-    source_address_prefixes      = var.allowed_http_source_ranges
-    destination_address_prefix   = "*"
+    name                       = "AllowHTTP"
+    priority                   = 1001
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "80"
+    source_address_prefixes    = var.allowed_http_source_ranges
+    destination_address_prefix = "*"
   }
 
   # Allow HTTPS traffic (can be restricted to specific ranges)
   security_rule {
-    name                         = "AllowHTTPS"
-    priority                     = 1002
-    direction                    = "Inbound"
-    access                       = "Allow"
-    protocol                     = "Tcp"
-    source_port_range            = "*"
-    destination_port_range       = "443"
-    source_address_prefixes      = var.allowed_http_source_ranges
-    destination_address_prefix   = "*"
+    name                       = "AllowHTTPS"
+    priority                   = 1002
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "443"
+    source_address_prefixes    = var.allowed_http_source_ranges
+    destination_address_prefix = "*"
   }
 
   # Allow SSH for management (restricted to VNet by default)
   security_rule {
-    name                         = "AllowSSH"
-    priority                     = 1003
-    direction                    = "Inbound"
-    access                       = "Allow"
-    protocol                     = "Tcp"
-    source_port_range            = "*"
-    destination_port_range       = "22"
-    source_address_prefixes      = var.allowed_ssh_source_ranges
-    destination_address_prefix   = "*"
+    name                       = "AllowSSH"
+    priority                   = 1003
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "22"
+    source_address_prefixes    = var.allowed_ssh_source_ranges
+    destination_address_prefix = "*"
   }
 
   tags = var.tags
@@ -79,15 +79,15 @@ resource "azurerm_network_security_group" "app_nsg" {
 
   # Allow SSH for management (restricted to VNet by default)
   security_rule {
-    name                         = "AllowSSH"
-    priority                     = 1002
-    direction                    = "Inbound"
-    access                       = "Allow"
-    protocol                     = "Tcp"
-    source_port_range            = "*"
-    destination_port_range       = "22"
-    source_address_prefixes      = var.allowed_ssh_source_ranges
-    destination_address_prefix   = "*"
+    name                       = "AllowSSH"
+    priority                   = 1002
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "22"
+    source_address_prefixes    = var.allowed_ssh_source_ranges
+    destination_address_prefix = "*"
   }
 
   tags = var.tags
@@ -136,80 +136,80 @@ resource "azurerm_network_security_group" "bastion_nsg" {
 
   # Allow HTTPS traffic to Bastion (required for Azure Bastion)
   security_rule {
-    name                         = "AllowHTTPSInbound"
-    priority                     = 1000
-    direction                    = "Inbound"
-    access                       = "Allow"
-    protocol                     = "Tcp"
-    source_port_range            = "*"
-    destination_port_range       = "443"
-    source_address_prefix        = "Internet"
-    destination_address_prefix   = "*"
+    name                       = "AllowHTTPSInbound"
+    priority                   = 1000
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "443"
+    source_address_prefix      = "Internet"
+    destination_address_prefix = "*"
   }
 
   # Allow gateway manager traffic (required for Azure Bastion)
   security_rule {
-    name                         = "AllowGatewayManagerInbound"
-    priority                     = 1001
-    direction                    = "Inbound"
-    access                       = "Allow"
-    protocol                     = "Tcp"
-    source_port_range            = "*"
-    destination_port_range       = "443"
-    source_address_prefix        = "GatewayManager"
-    destination_address_prefix   = "*"
+    name                       = "AllowGatewayManagerInbound"
+    priority                   = 1001
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "443"
+    source_address_prefix      = "GatewayManager"
+    destination_address_prefix = "*"
   }
 
   # Allow Azure Load Balancer traffic
   security_rule {
-    name                         = "AllowLoadBalancerInbound"
-    priority                     = 1002
-    direction                    = "Inbound"
-    access                       = "Allow"
-    protocol                     = "Tcp"
-    source_port_range            = "*"
-    destination_port_range       = "443"
-    source_address_prefix        = "AzureLoadBalancer"
-    destination_address_prefix   = "*"
+    name                       = "AllowLoadBalancerInbound"
+    priority                   = 1002
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "443"
+    source_address_prefix      = "AzureLoadBalancer"
+    destination_address_prefix = "*"
   }
 
   # Allow SSH and RDP outbound to VNet (required for Azure Bastion)
   security_rule {
-    name                         = "AllowBastionHostCommunication"
-    priority                     = 1000
-    direction                    = "Outbound"
-    access                       = "Allow"
-    protocol                     = "*"
-    source_port_range            = "*"
-    destination_port_ranges      = ["8080", "5701"]
-    source_address_prefix        = "VirtualNetwork"
-    destination_address_prefix   = "VirtualNetwork"
+    name                       = "AllowBastionHostCommunication"
+    priority                   = 1000
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_ranges    = ["8080", "5701"]
+    source_address_prefix      = "VirtualNetwork"
+    destination_address_prefix = "VirtualNetwork"
   }
 
   # Allow SSH and RDP to target VMs
   security_rule {
-    name                         = "AllowSSHRDPOutbound"
-    priority                     = 1001
-    direction                    = "Outbound"
-    access                       = "Allow"
-    protocol                     = "*"
-    source_port_range            = "*"
-    destination_port_ranges      = ["22", "3389"]
-    source_address_prefix        = "*"
-    destination_address_prefix   = "VirtualNetwork"
+    name                       = "AllowSSHRDPOutbound"
+    priority                   = 1001
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_ranges    = ["22", "3389"]
+    source_address_prefix      = "*"
+    destination_address_prefix = "VirtualNetwork"
   }
 
   # Allow Azure Cloud outbound
   security_rule {
-    name                         = "AllowAzureCloudOutbound"
-    priority                     = 1002
-    direction                    = "Outbound"
-    access                       = "Allow"
-    protocol                     = "Tcp"
-    source_port_range            = "*"
-    destination_port_range       = "443"
-    source_address_prefix        = "*"
-    destination_address_prefix   = "AzureCloud"
+    name                       = "AllowAzureCloudOutbound"
+    priority                   = 1002
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "443"
+    source_address_prefix      = "*"
+    destination_address_prefix = "AzureCloud"
   }
 
   tags = var.tags
