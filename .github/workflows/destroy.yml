@@ -1,0 +1,125 @@
+name: 'Destroy Infrastructure'
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to destroy'
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+      confirmation:
+        description: 'Type "DESTROY" to confirm'
+        required: true
+        type: string
+
+env:
+  TF_VERSION: '1.6.0'
+  TF_IN_AUTOMATION: true
+  TF_INPUT: false
+
+jobs:
+  # Validation before destruction
+  validate-destroy:
+    name: 'Validate Destroy Request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirmation }}" != "DESTROY" ]; then
+            echo "❌ Invalid confirmation. Please type 'DESTROY' to confirm."
+            exit 1
+          fi
+          echo "✅ Confirmation validated"
+
+      - name: Check Environment
+        run: |
+          if [ "${{ github.event.inputs.environment }}" == "production" ]; then
+            echo "⚠️  WARNING: You are about to destroy PRODUCTION environment!"
+          fi
+          echo "Environment: ${{ github.event.inputs.environment }}"
+
+  # Destroy infrastructure
+  destroy:
+    name: 'Destroy Infrastructure'
+    runs-on: ubuntu-latest
+    needs: validate-destroy
+    environment: 
+      name: ${{ github.event.inputs.environment }}
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Set Environment Variables
+        run: |
+          if [ "${{ github.event.inputs.environment }}" == "development" ]; then
+            echo "TF_STATE_KEY=dev/terraform.tfstate" >> $GITHUB_ENV
+            echo "RG_NAME=RG-MKB-Netwerk-Dev" >> $GITHUB_ENV
+            echo "VNET_NAME=mkb-vnet-dev" >> $GITHUB_ENV
+          elif [ "${{ github.event.inputs.environment }}" == "staging" ]; then
+            echo "TF_STATE_KEY=staging/terraform.tfstate" >> $GITHUB_ENV
+            echo "RG_NAME=RG-MKB-Netwerk-Staging" >> $GITHUB_ENV
+            echo "VNET_NAME=mkb-vnet-staging" >> $GITHUB_ENV
+          else
+            echo "TF_STATE_KEY=prod/terraform.tfstate" >> $GITHUB_ENV
+            echo "RG_NAME=RG-MKB-Netwerk" >> $GITHUB_ENV
+            echo "VNET_NAME=mkb-vnet" >> $GITHUB_ENV
+          fi
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Create terraform.tfvars
+        run: |
+          cat << EOF > terraform.tfvars
+          resource_group_name = "${{ env.RG_NAME }}"
+          location = "West Europe"
+          vnet_name = "${{ env.VNET_NAME }}"
+          admin_ssh_public_key = "${{ secrets.SSH_PUBLIC_KEY }}"
+          enable_bastion = true
+          EOF
+
+      - name: Terraform Plan Destroy
+        run: terraform plan -destroy -detailed-exitcode -out=destroy-plan
+
+      - name: Show Destroy Plan
+        run: terraform show destroy-plan
+
+      - name: Wait for Final Confirmation
+        if: github.event.inputs.environment == 'production'
+        run: |
+          echo "⏳ Waiting 30 seconds before destroying PRODUCTION..."
+          sleep 30
+
+      - name: Terraform Destroy
+        run: terraform apply -auto-approve destroy-plan
+
+      - name: Cleanup State (if resource group is gone)
+        if: always()
+        continue-on-error: true
+        run: |
+          # Check if resource group still exists
+          if ! az group show --name "${{ env.RG_NAME }}" --output none 2>/dev/null; then
+            echo "Resource group destroyed successfully"
+          else
+            echo "⚠️  Resource group still exists, manual cleanup may be required"
+          fi
+
+      - name: Notify Destruction Complete
+        run: |
+          echo "💥 Infrastructure destroyed successfully!"
+          echo "Environment: ${{ github.event.inputs.environment }}"
+          echo "Resource Group: ${{ env.RG_NAME }}"
