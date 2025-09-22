@@ -101,9 +101,10 @@ module "security" {
   location            = module.resource_group.resource_group_location
 
   # Subnet references
-  web_subnet_id = module.networking.web_subnet_id
-  app_subnet_id = module.networking.app_subnet_id
-  db_subnet_id  = module.networking.db_subnet_id
+  web_subnet_id     = module.networking.web_subnet_id
+  app_subnet_id     = module.networking.app_subnet_id
+  db_subnet_id      = module.networking.db_subnet_id
+  bastion_subnet_id = module.networking.bastion_subnet_id
 
   # Production security group names
   web_nsg_name = "web-nsg-prod"
