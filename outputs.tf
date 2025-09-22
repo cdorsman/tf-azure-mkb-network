@@ -94,11 +94,11 @@ output "bastion_public_ip" {
 output "deployment_summary" {
   description = "Summary of the deployed infrastructure"
   value = {
-    resource_group = module.resource_group.resource_group_name
-    location       = module.resource_group.resource_group_location
-    vnet_name      = module.networking.vnet_name
-    vmss_name      = module.vmss.vmss_name
-    web_url        = module.vmss.web_url
+    resource_group  = module.resource_group.resource_group_name
+    location        = module.resource_group.resource_group_location
+    vnet_name       = module.networking.vnet_name
+    vmss_name       = module.vmss.vmss_name
+    web_url         = module.vmss.web_url
     bastion_enabled = var.enable_bastion
   }
 }

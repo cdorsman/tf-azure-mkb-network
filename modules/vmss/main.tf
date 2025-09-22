@@ -70,7 +70,7 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss" {
   location            = var.location
   sku                 = var.vm_sku
   instances           = var.initial_instances
-  
+
   # Disable password authentication
   disable_password_authentication = true
 
