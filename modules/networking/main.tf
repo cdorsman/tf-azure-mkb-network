@@ -21,6 +21,7 @@ resource "azurerm_virtual_network" "mkb_vnet" {
 }
 
 # Create Web Subnet
+#checkov:skip=CKV2_AZURE_31:NSG association is handled in the security module
 resource "azurerm_subnet" "web_subnet" {
   name                 = var.web_subnet_name
   resource_group_name  = var.resource_group_name
@@ -29,6 +30,7 @@ resource "azurerm_subnet" "web_subnet" {
 }
 
 # Create App Subnet
+#checkov:skip=CKV2_AZURE_31:NSG association is handled in the security module
 resource "azurerm_subnet" "app_subnet" {
   name                 = var.app_subnet_name
   resource_group_name  = var.resource_group_name
@@ -37,6 +39,7 @@ resource "azurerm_subnet" "app_subnet" {
 }
 
 # Create DB Subnet
+#checkov:skip=CKV2_AZURE_31:NSG association is handled in the security module
 resource "azurerm_subnet" "db_subnet" {
   name                 = var.db_subnet_name
   resource_group_name  = var.resource_group_name
@@ -45,6 +48,7 @@ resource "azurerm_subnet" "db_subnet" {
 }
 
 # Create Bastion Subnet (required for Azure Bastion)
+#checkov:skip=CKV2_AZURE_31:NSG association is handled in the security module
 resource "azurerm_subnet" "bastion_subnet" {
   name                 = "AzureBastionSubnet"
   resource_group_name  = var.resource_group_name
