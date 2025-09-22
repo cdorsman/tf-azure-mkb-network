@@ -119,4 +119,10 @@ setup-local.sh
 deploy-local.sh
 *.local.sh
 
+# Service Principal and secrets documentation
+GITHUB-SECRETS-SETUP.md
+SERVICE-PRINCIPAL-*.md
+*secrets*
+*credentials*
+
 .checkov.yml
