@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - develop
     paths:
       - '**.tf'
       - '**.tfvars'
@@ -41,6 +40,7 @@ env:
   TF_VERSION: '1.6.0'
   TF_IN_AUTOMATION: true
   TF_INPUT: false
+  TF_LOG: ERROR
 
 jobs:
   # Validate Terraform code
