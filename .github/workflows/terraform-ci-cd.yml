@@ -100,7 +100,7 @@ jobs:
           output_file_path: checkov-report.sarif
 
       - name: Upload Checkov results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: checkov-report.sarif
@@ -173,7 +173,7 @@ jobs:
             })
 
       - name: Upload Plan Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tfplan-dev
           path: tfplan
@@ -201,7 +201,7 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Download Plan Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: tfplan-dev
 
@@ -230,7 +230,7 @@ jobs:
         run: terraform output -json > outputs.json
 
       - name: Upload Outputs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: terraform-outputs-dev
           path: outputs.json
@@ -273,7 +273,7 @@ jobs:
         run: terraform plan -detailed-exitcode -out=tfplan
 
       - name: Upload Plan Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tfplan-prod
           path: tfplan
@@ -303,7 +303,7 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Download Plan Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: tfplan-prod
 
@@ -330,7 +330,7 @@ jobs:
           echo "web_url=$(terraform output -raw web_url)" >> $GITHUB_OUTPUT
 
       - name: Upload Outputs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: terraform-outputs-prod
           path: outputs.json
