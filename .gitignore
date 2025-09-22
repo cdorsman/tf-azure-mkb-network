@@ -118,3 +118,5 @@ terraform.tfvars.local
 setup-local.sh
 deploy-local.sh
 *.local.sh
+
+.checkov.yml
