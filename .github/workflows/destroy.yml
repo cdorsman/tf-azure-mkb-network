@@ -30,15 +30,15 @@ jobs:
       - name: Validate Confirmation
         run: |
           if [ "${{ github.event.inputs.confirmation }}" != "DESTROY" ]; then
-            echo "❌ Invalid confirmation. Please type 'DESTROY' to confirm."
+            echo "Invalid confirmation. Please type 'DESTROY' to confirm."
             exit 1
           fi
-          echo "✅ Confirmation validated"
+          echo "Confirmation validated"
 
       - name: Check Environment
         run: |
           if [ "${{ github.event.inputs.environment }}" == "production" ]; then
-            echo "⚠️  WARNING: You are about to destroy PRODUCTION environment!"
+            echo "WARNING: You are about to destroy PRODUCTION environment!"
           fi
           echo "Environment: ${{ github.event.inputs.environment }}"
 
@@ -85,8 +85,9 @@ jobs:
       - name: Create terraform.tfvars
         run: |
           cat << EOF > terraform.tfvars
+          # Environment variables are set dynamically in previous step
           resource_group_name = "${{ env.RG_NAME }}"
-          location = "West Europe"
+          location = "West US 2"
           vnet_name = "${{ env.VNET_NAME }}"
           admin_ssh_public_key = "${{ secrets.SSH_PUBLIC_KEY }}"
           enable_bastion = true
@@ -101,7 +102,7 @@ jobs:
       - name: Wait for Final Confirmation
         if: github.event.inputs.environment == 'production'
         run: |
-          echo "⏳ Waiting 30 seconds before destroying PRODUCTION..."
+          echo "Waiting 30 seconds before destroying PRODUCTION..."
           sleep 30
 
       - name: Terraform Destroy
@@ -115,11 +116,11 @@ jobs:
           if ! az group show --name "${{ env.RG_NAME }}" --output none 2>/dev/null; then
             echo "Resource group destroyed successfully"
           else
-            echo "⚠️  Resource group still exists, manual cleanup may be required"
+            echo "Resource group still exists, manual cleanup may be required"
           fi
 
       - name: Notify Destruction Complete
         run: |
-          echo "💥 Infrastructure destroyed successfully!"
+          echo "Infrastructure destroyed successfully!"
           echo "Environment: ${{ github.event.inputs.environment }}"
           echo "Resource Group: ${{ env.RG_NAME }}"

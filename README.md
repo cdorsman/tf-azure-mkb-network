@@ -112,7 +112,7 @@ Gebruik Azure Bastion om SSH verbindingen te maken tussen de subnetten en test d
 ### terraform.tfvars Variabelen
 ```hcl
 resource_group_name    = "RG-MKB-Netwerk"
-location              = "West Europe"
+location              = "West US 2"
 vnet_name             = "mkb-vnet"
 admin_ssh_public_key  = "ssh-rsa AAAAB3N..."
 enable_bastion        = true

@@ -13,6 +13,13 @@ terraform {
       version = "~>4.0"
     }
   }
+  
+  backend "azurerm" {
+    resource_group_name  = "RG-MKB-Netwerk"
+    storage_account_name = "mkbterraformstate8571"
+    container_name       = "tfstate"
+    key                  = "production.tfstate"
+  }
 }
 
 # Configure the Microsoft Azure Provider
@@ -33,60 +40,110 @@ locals {
 # Create Resource Group
 module "resource_group" {
   source = "./modules/resource-group"
-  
+
   resource_group_name = var.resource_group_name
-  location           = var.location
-  tags               = local.common_tags
+  location            = var.location
+  tags                = local.common_tags
 }
 
 # Create Networking Infrastructure
+#checkov:skip=CKV2_AZURE_31:NSG associations are handled in the security module
 module "networking" {
   source = "./modules/networking"
-  
+
   resource_group_name = module.resource_group.resource_group_name
-  location           = module.resource_group.resource_group_location
-  vnet_name          = var.vnet_name
-  tags               = local.common_tags
-  
+  location            = module.resource_group.resource_group_location
+  vnet_name           = var.vnet_name
+  tags                = local.common_tags
+
   depends_on = [module.resource_group]
 }
 
 # Create Security Groups
 module "security" {
   source = "./modules/security"
-  
+
   resource_group_name = module.resource_group.resource_group_name
-  location           = module.resource_group.resource_group_location
-  web_subnet_id      = module.networking.web_subnet_id
-  app_subnet_id      = module.networking.app_subnet_id
-  db_subnet_id       = module.networking.db_subnet_id
-  tags               = local.common_tags
-  
+  location            = module.resource_group.resource_group_location
+  web_subnet_id       = module.networking.web_subnet_id
+  app_subnet_id       = module.networking.app_subnet_id
+  db_subnet_id        = module.networking.db_subnet_id
+  bastion_subnet_id   = module.networking.bastion_subnet_id
+  tags                = local.common_tags
+
   depends_on = [module.networking]
+}
+
+# Generate SSH Keys for VM access
+resource "tls_private_key" "vm_ssh_key" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
 }
 
 # Create Virtual Machine Scale Set
 module "vmss" {
   source = "./modules/vmss"
-  
-  resource_group_name    = module.resource_group.resource_group_name
-  location              = module.resource_group.resource_group_location
-  subnet_id             = module.networking.web_subnet_id
-  admin_ssh_public_key  = var.admin_ssh_public_key
-  tags                  = local.common_tags
-  
+
+  resource_group_name = module.resource_group.resource_group_name
+  location            = module.resource_group.resource_group_location
+  subnet_id           = module.networking.web_subnet_id
+  ssh_public_key      = tls_private_key.vm_ssh_key.public_key_openssh
+  tags                = local.common_tags
+
   depends_on = [module.security]
+}
+
+# Create Stress Test Infrastructure
+module "stress_test" {
+  source = "./modules/stress-test"
+
+  resource_group_name = module.resource_group.resource_group_name
+  location            = module.resource_group.resource_group_location
+  load_balancer_ip    = module.vmss.load_balancer_public_ip
+  admin_username      = "azureuser"
+  ssh_private_key     = tls_private_key.vm_ssh_key.private_key_pem
+  ssh_public_key      = tls_private_key.vm_ssh_key.public_key_openssh
+  tags                = local.common_tags
+
+  depends_on = [module.vmss]
 }
 
 # Create Azure Bastion (optional - can be enabled/disabled)
 module "bastion" {
   count  = var.enable_bastion ? 1 : 0
   source = "./modules/bastion"
-  
+
   resource_group_name = module.resource_group.resource_group_name
-  location           = module.resource_group.resource_group_location
-  bastion_subnet_id  = module.networking.bastion_subnet_id
-  tags               = local.common_tags
-  
+  location            = module.resource_group.resource_group_location
+  bastion_subnet_id   = module.networking.bastion_subnet_id
+  tags                = local.common_tags
+
   depends_on = [module.networking]
+}
+
+# Create Monitoring and Alerting Infrastructure
+module "monitoring" {
+  source = "./modules/monitoring"
+
+  resource_group_name = module.resource_group.resource_group_name
+  location            = module.resource_group.resource_group_location
+  vmss_id             = module.vmss.vmss_id
+  alert_email         = var.alert_email
+  tags                = local.common_tags
+
+  depends_on = [module.vmss]
+}
+
+# Create Dashboard for Monitoring
+module "dashboard" {
+  source = "./modules/dashboard"
+
+  resource_group_name        = module.resource_group.resource_group_name
+  location                   = module.resource_group.resource_group_location
+  vmss_name                  = module.vmss.vmss_name
+  log_analytics_workspace_id = module.monitoring.log_analytics_workspace_id
+  application_insights_id    = module.monitoring.application_insights_id
+  tags                       = local.common_tags
+
+  depends_on = [module.monitoring]
 }

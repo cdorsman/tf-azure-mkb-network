@@ -23,9 +23,13 @@ resource "azurerm_public_ip" "bastion_public_ip" {
 
 # Create Azure Bastion Host
 resource "azurerm_bastion_host" "bastion" {
-  name                = var.bastion_name
-  location            = var.location
-  resource_group_name = var.resource_group_name
+  name                   = var.bastion_name
+  location               = var.location
+  resource_group_name    = var.resource_group_name
+  sku                    = "Standard"
+  tunneling_enabled      = true
+  ip_connect_enabled     = true
+  shareable_link_enabled = false
 
   ip_configuration {
     name                 = "configuration"

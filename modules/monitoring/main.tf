@@ -37,13 +37,14 @@ resource "azurerm_monitor_action_group" "main" {
 
 # CPU Alert Rule for VMSS
 resource "azurerm_monitor_metric_alert" "cpu_alert" {
-  name                = "vmss-cpu-alert"
+  name                = "VMSS-CPU-High-Alert"
   resource_group_name = var.resource_group_name
   scopes              = [var.vmss_id]
-  description         = "Alert when CPU usage exceeds 80% for 10 minutes"
+  description         = "Alert when CPU usage exceeds 80% for 15 minutes"
   severity            = 2
   frequency           = "PT1M"
-  window_size         = "PT10M"
+  window_size         = "PT15M"
+  enabled             = true
 
   criteria {
     metric_namespace = "Microsoft.Compute/virtualMachineScaleSets"
@@ -55,6 +56,7 @@ resource "azurerm_monitor_metric_alert" "cpu_alert" {
 
   action {
     action_group_id = azurerm_monitor_action_group.main.id
+    webhook_properties = {}
   }
 
   tags = var.tags
@@ -62,13 +64,14 @@ resource "azurerm_monitor_metric_alert" "cpu_alert" {
 
 # Network Bandwidth Alert Rule for VMSS
 resource "azurerm_monitor_metric_alert" "network_alert" {
-  name                = "vmss-network-alert"
+  name                = "VMSS-Network-High-Alert"
   resource_group_name = var.resource_group_name
   scopes              = [var.vmss_id]
   description         = "Alert when network bandwidth usage exceeds 500 MB per hour"
   severity            = 2
   frequency           = "PT5M"
   window_size         = "PT1H"
+  enabled             = true
 
   criteria {
     metric_namespace = "Microsoft.Compute/virtualMachineScaleSets"
@@ -80,6 +83,7 @@ resource "azurerm_monitor_metric_alert" "network_alert" {
 
   action {
     action_group_id = azurerm_monitor_action_group.main.id
+    webhook_properties = {}
   }
 
   tags = var.tags
@@ -137,4 +141,16 @@ resource "azurerm_application_insights" "app_insights" {
   application_type    = "web"
 
   tags = var.tags
+}
+
+# Diagnostic Settings for VMSS to enable metrics
+resource "azurerm_monitor_diagnostic_setting" "vmss_diagnostics" {
+  name                       = "vmss-diagnostics"
+  target_resource_id         = var.vmss_id
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.log_workspace.id
+
+  metric {
+    category = "AllMetrics"
+    enabled  = true
+  }
 }

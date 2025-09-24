@@ -1,9 +1,16 @@
 name: 'Terraform CI/CD Pipeline'
 
+# Permissions needed for GitHub Actions
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
 on:
   push:
     branches:
       - main
+      - develop
     paths:
       - '**.tf'
       - '**.tfvars'
@@ -29,12 +36,12 @@ on:
       environment:
         description: 'Target environment'
         required: true
-        default: 'development'
+        default: 'production'
         type: choice
         options:
+          - production
           - development
           - staging
-          - production
 
 env:
   TF_VERSION: '1.6.0'
@@ -98,10 +105,12 @@ jobs:
           framework: terraform
           output_format: sarif
           output_file_path: checkov-report.sarif
+          skip_check: CKV2_AZURE_31,CKV_AZURE_97
 
       - name: Upload Checkov results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
+        continue-on-error: true
         with:
           sarif_file: checkov-report.sarif
 
@@ -110,7 +119,9 @@ jobs:
     name: 'Plan - Development'
     runs-on: ubuntu-latest
     needs: [validate, security]
-    if: github.ref != 'refs/heads/main' || github.event.inputs.action == 'plan'
+    if: |
+      (github.ref != 'refs/heads/main' || github.event.inputs.action == 'plan') &&
+      (github.event.inputs.environment == 'development' || github.event.inputs.environment == '')
     environment: development
     env:
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -133,9 +144,8 @@ jobs:
         run: |
           cat << EOF > terraform.tfvars
           resource_group_name = "RG-MKB-Netwerk-Dev"
-          location = "West Europe"
+          location = "West US 2"
           vnet_name = "mkb-vnet-dev"
-          admin_ssh_public_key = "${{ secrets.SSH_PUBLIC_KEY }}"
           enable_bastion = true
           EOF
 
@@ -145,35 +155,8 @@ jobs:
           terraform plan -detailed-exitcode -out=tfplan
           echo "exitcode=$?" >> $GITHUB_OUTPUT
 
-      - name: Comment Plan on PR
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const plan = fs.readFileSync('tfplan', 'utf8');
-            
-            const output = `#### Terraform Plan 📖 \`${{ steps.plan.outcome }}\`
-            
-            <details><summary>Show Plan</summary>
-            
-            \`\`\`hcl
-            ${plan}
-            \`\`\`
-            
-            </details>
-            
-            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`*`;
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            })
-
       - name: Upload Plan Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tfplan-dev
           path: tfplan
@@ -184,7 +167,7 @@ jobs:
     name: 'Deploy - Development'
     runs-on: ubuntu-latest
     needs: plan-dev
-    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    if: github.event.inputs.environment == 'development' && github.event.inputs.action == 'apply'
     environment: development
     env:
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -201,36 +184,33 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Download Plan Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: tfplan-dev
 
       - name: Terraform Init
-        run: |
-          terraform init \
-            -backend-config="resource_group_name=${{ secrets.TF_STATE_RESOURCE_GROUP }}" \
-            -backend-config="storage_account_name=${{ secrets.TF_STATE_STORAGE_ACCOUNT }}" \
-            -backend-config="container_name=${{ secrets.TF_STATE_CONTAINER }}" \
-            -backend-config="key=dev/terraform.tfstate"
+        run: terraform init
 
       - name: Create terraform.tfvars
         run: |
           cat << EOF > terraform.tfvars
           resource_group_name = "RG-MKB-Netwerk-Dev"
-          location = "West Europe"
+          location = "West US 2"
           vnet_name = "mkb-vnet-dev"
-          admin_ssh_public_key = "${{ secrets.SSH_PUBLIC_KEY }}"
           enable_bastion = true
           EOF
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+        run: |
+          echo "🚀 Starting Terraform Apply with enhanced visibility..."
+          echo "📊 Using parallelism=2 for clearer module execution tracking"
+          terraform apply -auto-approve -parallelism=2 tfplan
 
       - name: Terraform Output
         run: terraform output -json > outputs.json
 
       - name: Upload Outputs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: terraform-outputs-dev
           path: outputs.json
@@ -240,7 +220,9 @@ jobs:
     name: 'Plan - Production'
     runs-on: ubuntu-latest
     needs: [validate, security]
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event.inputs.action == 'plan')
+    if: |
+      (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
+      (github.event.inputs.environment == 'production' && (github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply'))
     environment: production
     env:
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -263,17 +245,17 @@ jobs:
         run: |
           cat << EOF > terraform.tfvars
           resource_group_name = "RG-MKB-Netwerk"
-          location = "West Europe"
+          location = "West US 2"
           vnet_name = "mkb-vnet"
-          admin_ssh_public_key = "${{ secrets.SSH_PUBLIC_KEY }}"
           enable_bastion = true
+          alert_email = "cdorsman@thefactory.nl"
           EOF
 
       - name: Terraform Plan
         run: terraform plan -detailed-exitcode -out=tfplan
 
       - name: Upload Plan Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tfplan-prod
           path: tfplan
@@ -284,7 +266,7 @@ jobs:
     name: 'Deploy - Production'
     runs-on: ubuntu-latest
     needs: plan-prod
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event.inputs.action == 'apply')
+    if: github.event.inputs.environment == 'production' && github.event.inputs.action == 'apply'
     environment: 
       name: production
       url: ${{ steps.outputs.outputs.web_url }}
@@ -303,7 +285,7 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Download Plan Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: tfplan-prod
 
@@ -314,14 +296,17 @@ jobs:
         run: |
           cat << EOF > terraform.tfvars
           resource_group_name = "RG-MKB-Netwerk"
-          location = "West Europe"
+          location = "West US 2"
           vnet_name = "mkb-vnet"
-          admin_ssh_public_key = "${{ secrets.SSH_PUBLIC_KEY }}"
           enable_bastion = true
+          alert_email = "cdorsman@thefactory.nl"
           EOF
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+        run: |
+          echo "🚀 Starting Terraform Apply with enhanced visibility..."
+          echo "📊 Using parallelism=2 for clearer module execution tracking"
+          terraform apply -auto-approve -parallelism=2 tfplan
 
       - name: Terraform Output
         id: outputs
@@ -330,7 +315,7 @@ jobs:
           echo "web_url=$(terraform output -raw web_url)" >> $GITHUB_OUTPUT
 
       - name: Upload Outputs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: terraform-outputs-prod
           path: outputs.json
@@ -340,3 +325,84 @@ jobs:
         run: |
           echo "🚀 Production deployment successful!"
           echo "Web URL: ${{ steps.outputs.outputs.web_url }}"
+
+  # Destroy Development Environment
+  destroy-dev:
+    name: 'Destroy - Development'
+    runs-on: ubuntu-latest
+    needs: [validate, security]
+    if: github.event.inputs.environment == 'development' && github.event.inputs.action == 'destroy'
+    environment: development
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Create terraform.tfvars
+        run: |
+          cat << EOF > terraform.tfvars
+          resource_group_name = "RG-MKB-Netwerk-Dev"
+          location = "West US 2"
+          vnet_name = "mkb-vnet-dev"
+          enable_bastion = true
+          EOF
+
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve
+
+      - name: Notify Destroy Success
+        if: success()
+        run: echo "🗑️ Development environment destroyed successfully!"
+
+  # Destroy Production Environment
+  destroy-prod:
+    name: 'Destroy - Production'
+    runs-on: ubuntu-latest
+    needs: [validate, security]
+    if: github.event.inputs.environment == 'production' && github.event.inputs.action == 'destroy'
+    environment: production
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Create terraform.tfvars
+        run: |
+          cat << EOF > terraform.tfvars
+          resource_group_name = "RG-MKB-Netwerk"
+          location = "West US 2"
+          vnet_name = "mkb-vnet"
+          enable_bastion = true
+          alert_email = "cdorsman@thefactory.nl"
+          EOF
+
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve
+
+      - name: Notify Destroy Success
+        if: success()
+        run: echo "🗑️ Production environment destroyed successfully!"

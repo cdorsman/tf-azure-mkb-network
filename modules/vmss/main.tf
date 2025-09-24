@@ -70,8 +70,8 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss" {
   location            = var.location
   sku                 = var.vm_sku
   instances           = var.initial_instances
-  
-  # Disable password authentication
+
+  # Security enhancements
   disable_password_authentication = true
 
   source_image_reference {
@@ -105,6 +105,11 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss" {
     public_key = var.ssh_public_key
   }
 
+  # Enable system-assigned managed identity
+  identity {
+    type = "SystemAssigned"
+  }
+
   # Install NGINX via custom script extension
   custom_data = base64encode(local.nginx_install_script)
 
@@ -118,59 +123,28 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss" {
 
 # Custom script for NGINX installation
 locals {
-  nginx_install_script = <<-EOF
-    #!/bin/bash
-    
-    # Update package list
-    sudo apt-get update -y
-    
-    # Install NGINX
-    sudo apt-get install -y nginx
-    
-    # Install stress-ng for testing
-    sudo apt-get install -y stress-ng
-    
-    # Create a simple index page
-    sudo tee /var/www/html/index.html > /dev/null <<HTML
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>MKB Web Server</title>
-    </head>
-    <body>
-        <h1>Welcome to MKB Web Server</h1>
-        <p>This server is running on: $(hostname)</p>
-        <p>Current time: $(date)</p>
-        <p>Server IP: $(hostname -I | awk '{print $1}')</p>
-    </body>
-    </html>
-HTML
-    
-    # Start and enable NGINX
-    sudo systemctl start nginx
-    sudo systemctl enable nginx
-    
-    # Configure firewall
-    sudo ufw allow 'Nginx Full'
-    sudo ufw allow OpenSSH
-    
-    # Install Azure Monitor Agent dependencies
-    sudo apt-get install -y curl wget
-    
-    # Create stress test script
-    sudo tee /home/${var.admin_username}/stress_test.sh > /dev/null <<STRESS
+  nginx_install_script = <<EOF
 #!/bin/bash
-echo "Starting CPU stress test for monitoring alerts..."
-echo "This will trigger the CPU alert after 10 minutes of >80% usage"
-stress-ng --cpu 0 --timeout 600s --metrics-brief
-echo "Stress test completed."
-STRESS
-    
-    sudo chmod +x /home/${var.admin_username}/stress_test.sh
-    sudo chown ${var.admin_username}:${var.admin_username} /home/${var.admin_username}/stress_test.sh
-    
-    echo "NGINX installation and configuration completed"
-  EOF
+
+# Main initialization script for MKB VMSS
+set -e
+
+echo "Starting MKB VMSS initialization..."
+
+# Install NGINX
+echo "=== Installing NGINX ==="
+${file("${path.module}/scripts/install-nginx.sh")}
+
+# Create custom HTML page
+echo "=== Creating custom HTML page ==="
+${file("${path.module}/scripts/create-html.sh")}
+
+# Create stress test script
+echo "=== Creating stress test script ==="
+${file("${path.module}/scripts/create-stress-script.sh")} ${var.admin_username}
+
+echo "MKB VMSS initialization completed successfully"
+EOF
 }
 
 # Create Monitor Autoscale Setting
